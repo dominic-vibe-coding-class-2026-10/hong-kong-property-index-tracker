@@ -21,7 +21,7 @@ Commits on `main` as of this deployment note:
 | --- | --- | --- | --- |
 | [`5baf212`](https://github.com/dominic-vibe-coding-class-2026-10/hong-kong-property-index-tracker/commit/5baf212) | 2026-11-15 17:25 | Dominic Yu | Add the Hong Kong property index tracker. |
 | [`962c8fc`](https://github.com/dominic-vibe-coding-class-2026-10/hong-kong-property-index-tracker/commit/962c8fc) | 2026-11-15 17:59 | Dominic Yu | Add the post-manifest Cursor conversation transcript. |
-| [`a964380`](https://github.com/dominic-vibe-coding-class-2026-10/hong-kong-property-index-tracker/commit/a964380756c478490f58ff71dcb7f42bd40d5db1) | 2026-11-15 | Dominic Yu | Show author details on the dashboard and record deployment outcomes. |
+| [`d3e1f78`](https://github.com/dominic-vibe-coding-class-2026-10/hong-kong-property-index-tracker/commit/d3e1f786dbd7ed39a91564d825c343472422c106) | 2026-11-15 | Dominic Yu | Show author details on the dashboard and record deployment outcomes. |
 
 Remote: `git@github.com:dominic-vibe-coding-class-2026-10/hong-kong-property-index-tracker.git`
 
