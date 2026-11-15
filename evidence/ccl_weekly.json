@@ -1,0 +1,28 @@
+{
+  "path": "playwright_weekly",
+  "page": "https://hk.centanet.com/CCI/index",
+  "headline": 158.61,
+  "points": [
+    {
+      "period_date": "2026-10-25",
+      "period_label": "2026-10-19 – 2026-10-25",
+      "value": 159.38,
+      "source_path": "playwright_weekly",
+      "raw_note": "three latest weekly points"
+    },
+    {
+      "period_date": "2026-11-01",
+      "period_label": "2026-10-26 – 2026-11-01",
+      "value": 159.11,
+      "source_path": "playwright_weekly",
+      "raw_note": "three latest weekly points"
+    },
+    {
+      "period_date": "2026-11-08",
+      "period_label": "2026-11-02 – 2026-11-08",
+      "value": 158.61,
+      "source_path": "playwright_weekly",
+      "raw_note": "three latest weekly points"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "path": "tavily_firecrawl",
+  "url": "https://www.midland.com.hk/en/market-insight",
+  "extracted": {
+    "index_name": "Midland Property Price Index",
+    "latest_value": 148.1,
+    "period_end": "2026-11-09",
+    "series_scope": "territory"
+  },
+  "stored": [
+    {
+      "period_date": "2026-10-05",
+      "period_label": "2026-10-05",
+      "value": 149.2,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    },
+    {
+      "period_date": "2026-10-12",
+      "period_label": "2026-10-12",
+      "value": 149.3,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    },
+    {
+      "period_date": "2026-10-19",
+      "period_label": "2026-10-19",
+      "value": 149.1,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    },
+    {
+      "period_date": "2026-10-26",
+      "period_label": "2026-10-26",
+      "value": 148.7,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    },
+    {
+      "period_date": "2026-11-02",
+      "period_label": "2026-11-02",
+      "value": 148.4,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    },
+    {
+      "period_date": "2026-11-09",
+      "period_label": "2026-11-09",
+      "value": 148.1,
+      "source_path": "tavily_firecrawl",
+      "raw_note": null
+    }
+  ]
+}

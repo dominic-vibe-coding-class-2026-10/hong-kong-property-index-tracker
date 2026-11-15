@@ -1,0 +1,19 @@
+{
+  "path": "history_api",
+  "url": "https://hk.centanet.com/CCI/api/Index/CCLChart",
+  "count": 1715,
+  "first": {
+    "period_date": "1994-01-02",
+    "period_label": "1993-12-27 – 1994-01-02",
+    "value": 61.32,
+    "source_path": "history_api",
+    "raw_note": null
+  },
+  "last": {
+    "period_date": "2026-11-08",
+    "period_label": "2026-11-02 – 2026-11-08",
+    "value": 158.61,
+    "source_path": "history_api",
+    "raw_note": null
+  }
+}

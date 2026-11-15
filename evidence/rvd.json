@@ -1,0 +1,14 @@
+{
+  "path": "tavily_firecrawl",
+  "url": "https://www.rvd.gov.hk/doc/en/statistics/full.pdf",
+  "extracted_value": 320.4,
+  "extracted_period": "2026-09",
+  "stored": {
+    "period_date": "2026-09-01",
+    "period_label": "2026-09",
+    "value": 320.8,
+    "source_path": "tavily_firecrawl",
+    "raw_note": "provisional"
+  },
+  "history_count": 405
+}

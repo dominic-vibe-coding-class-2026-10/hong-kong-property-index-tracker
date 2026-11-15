@@ -1,0 +1,43 @@
+{
+  "path": "ollama",
+  "model": "kimi-k3.1-pro",
+  "url": "https://ollama.com/v1/chat/completions",
+  "texts": {
+    "en": "The Centa-City Leading Index stood at 158.61 for 2026-11-02 – 2026-11-08, down from 159.11 in the previous weekly reading. The Rating and Valuation Department Private Domestic Price Index was 320.8 in 2026-09, up from 320.2 in 2026-08. The Midland Realty Property Price Index was 148.1 on 2026-11-09, down from 148.4 on 2026-11-02. The indices use different base periods, so the levels are not directly comparable. The stated bases are July 1997 = 100 for the first index, 1999 = 100 for the second, and published index points for the third; the figures above describe movements within each series only.",
+    "zh-Hant": "這三個指數基期不同，點數不能直接比較。最新水平及較上一期變化如下：中原城市領先指數最新158.61點，較上一期跌0.50點；差餉物業估價署私人住宅售價指數最新320.8點，升0.6點；美聯物業樓價指數最新148.1點，跌0.3點。"
+  },
+  "payload": {
+    "indices": [
+      {
+        "name_en": "Centa-City Leading Index",
+        "name_zh": "中原城市領先指數",
+        "base_en": "July 1997 = 100",
+        "frequency": "weekly",
+        "latest_value": 158.61,
+        "latest_period": "2026-11-02 – 2026-11-08",
+        "previous_value": 159.11,
+        "previous_period": "2026-10-26 – 2026-11-01"
+      },
+      {
+        "name_en": "Rating and Valuation Department Private Domestic Price Index",
+        "name_zh": "差餉物業估價署私人住宅售價指數",
+        "base_en": "1999 = 100",
+        "frequency": "monthly",
+        "latest_value": 320.8,
+        "latest_period": "2026-09",
+        "previous_value": 320.2,
+        "previous_period": "2026-08"
+      },
+      {
+        "name_en": "Midland Realty Property Price Index",
+        "name_zh": "美聯物業樓價指數",
+        "base_en": "Published index points",
+        "frequency": "weekly",
+        "latest_value": 148.1,
+        "latest_period": "2026-11-09",
+        "previous_value": 148.4,
+        "previous_period": "2026-11-02"
+      }
+    ]
+  }
+}
