@@ -188,3 +188,19 @@ main { display: grid; gap: 28px; padding-bottom: 64px; }
   .section-head { flex-direction: column; }
   .canvas-wrap { height: 260px; }
 }
+
+
+.byline {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+
+.byline a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.byline a:hover { text-decoration: underline; }

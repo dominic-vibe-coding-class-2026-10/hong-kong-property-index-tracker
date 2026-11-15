@@ -1,7 +1,7 @@
 const I18N = {
   en: {
     eyebrow: "One site with patterns, many sites with Firecrawl",
-    title: "Hong Kong property indices",
+    title: "Hong Kong property indices · Dominic Yu",
     insight: "Comparison insight",
     latest: "Latest readings",
     chart: "Centa-City Leading Index history",
@@ -30,7 +30,7 @@ const I18N = {
   },
   "zh-Hant": {
     eyebrow: "單一網站靠規律，多個網站靠 Firecrawl",
-    title: "香港樓價指數",
+    title: "香港樓價指數 · Dominic Yu",
     insight: "比較解讀",
     latest: "最新讀數",
     chart: "中原城市領先指數歷史走勢",

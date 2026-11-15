@@ -131,3 +131,7 @@ Playwright runs only after those Firecrawl attempts fail. The path log in SQLite
 The page shows the Centa-City Leading Index history, the latest value of each index under its full name, a download for each stored series, and the insight in the selected language. The English / 繁體中文 control changes labels, buttons, series names, and the insight. The choice is remembered in the browser.
 
 These series do not share a base period. The Centa-City Leading Index is July 1997 = 100. The Rating and Valuation Department index is 1999 = 100. The levels are shown as published.
+
+## Deployment
+
+Live deployment notes and the git history for the class report are in [docs/deployment-log.md](docs/deployment-log.md).
