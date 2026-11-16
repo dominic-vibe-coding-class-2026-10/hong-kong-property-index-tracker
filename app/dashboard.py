@@ -72,19 +72,29 @@ def dashboard_data():
                 "download": f"/download/{series_id}.csv",
             }
         )
-    history = [
-        {"date": row["period_date"], "value": row["value"]}
-        for row in series_rows("ccl")
-    ]
+    for card in cards:
+        card["history"] = _history(card["id"])
+    ccl_history = next(card["history"] for card in cards if card["id"] == "ccl")
     return jsonify(
         {
             "series": cards,
-            "ccl_history": history,
+            "ccl_history": [{"date": point["date"], "value": point["value"]} for point in ccl_history],
             "insights": {language: row["text"] for language, row in insights.items()},
             "insight_at": None if not insights else max(row["created_at"] for row in insights.values()),
             "evidence": [dict(row) for row in recent_logs(12)],
         }
     )
+
+
+def _history(series_id: str) -> list[dict]:
+    return [
+        {
+            "date": row["period_date"],
+            "label": row["period_label"] or row["period_date"],
+            "value": row["value"],
+        }
+        for row in series_rows(series_id)
+    ]
 
 
 @app.route("/download/<series_id>.csv")
