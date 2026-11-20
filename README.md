@@ -9,7 +9,7 @@ The Centa-City Leading Index uses a fixed Centanet history API, then a weekly Pl
 - Full weekly Centa-City Leading Index history, from the Centanet chart API `https://hk.centanet.com/CCI/api/Index/CCLChart`
 - A weekly update of the three latest points, read on `https://hk.centanet.com/CCI/index` and accepted only when the chart matches the on-page headline
 - The latest Rating and Valuation Department Private Domestic Price Index (All Classes), checked against the official monthly file, plus that full monthly series for download
-- The latest Midland Realty Property Price Index from the official market-insight page
+- The Midland Realty Property Price Index from the official market-insight page: the territory-wide weekly series (the All / 全港 index), not a district index or the confidence index
 - `output.md` and the dashboard both show the Ollama Cloud comparison
 - Download buttons for each series currently stored in SQLite
 - A language switch between English and Traditional Chinese
@@ -115,16 +115,16 @@ A reading is not written when the gate fails.
 - Centa-City Leading Index history must contain the weekly series back to 1994, with a 7-day gap, and a latest week within the last 21 days.
 - The weekly page update reads the `本週公佈` value and the `反映…至…` date, then keeps the three newest chart points only when the newest value and date match that headline.
 - The Rating and Valuation Department extraction must match the latest All Classes figure in the official monthly file, within 0.5 points and the same month.
-- The Midland Realty extraction must be a territory-wide index point in a plausible range, with an as-of date in the last 21 days. Prices per square foot and district sub-indices are rejected.
+- The Midland Realty extraction must be the territory-wide weekly Midland Property Price Index (the All / 全港 index on the market-insight page, 美聯樓價指數). The headline has to match that published series. District indices, the confidence index, prices per square foot, and any other chart are rejected. A new reading more than 8 points away from the series already stored is not written beside it. A confirmed run replaces the stored Midland rows with that one weekly series.
 
 ## Tavily fallback
 
 Tavily is optional. When `TAVILY_API_KEY` is missing, Tavily returns no official URL, or the request fails, the pipeline logs a seed-URL fallback and continues:
 
 - Rating and Valuation Department: `https://www.rvd.gov.hk/en/publications/property_market_statistics.html`, then the monthly file `https://www.rvd.gov.hk/datagovhk/1.4M.csv` if the page extract does not pass the gate
-- Midland Realty: `https://www.midland.com.hk/en/market-insight/`
+- Midland Realty: `https://www.midland.com.hk/en/market-insight/` is always checked, including when Tavily also returns another Midland URL. The stored series is the territory-wide weekly index on that page (the All / 全港 figure), not a second chart from the same site.
 
-Playwright runs only after those Firecrawl attempts fail. The path log in SQLite and the evidence section on the dashboard record which path succeeded.
+Playwright runs only after those Firecrawl attempts fail. For Midland, if Firecrawl does not match the territory-wide index and the market-insight page still has that weekly series, the run stores the published series and records an official-page fallback instead of leaving the previous points in place. The path log in SQLite and the evidence section on the dashboard record which path succeeded.
 
 ## Dashboard
 

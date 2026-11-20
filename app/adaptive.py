@@ -26,7 +26,22 @@ from app.config import (
     env,
     setup_logging,
 )
-from app.db import init_db, log_path, upsert_observations, write_evidence
+from app.db import (
+    init_db,
+    log_path,
+    replace_observations,
+    series_rows,
+    upsert_observations,
+    write_evidence,
+)
+from app.midland import (
+    MIDLAND_MIN_POINTS,
+    disagreement_count,
+    observations_from_points,
+    parse_weekly_index,
+    select_midland_rows,
+    validate_weekly,
+)
 from app.quality import (
     QualityGateError,
     as_float,
@@ -73,13 +88,15 @@ PROMPTS = {
     ),
     "midland": (
         "Extract the latest territory-wide Midland Property Price Index "
-        "(美聯樓價指數), the headline index for all of Hong Kong. "
-        "Return the index in points. Never return a price per square foot "
-        "(dollar amounts, usually above 1000). Never return the Hong Kong Island, "
-        "Kowloon, or New Territories sub-index. Never return the Confidence Index. "
+        "(美聯樓價指數), the headline All / 全港 index on the market-insight page. "
+        "It is published every Monday. Return that index in points. "
+        "Never return a price per square foot (dollar amounts, usually above 1000). "
+        "Never return the Hong Kong Island, Kowloon, or New Territories sub-index. "
+        "Never return the Midland Confidence Index (美聯信心指數), the US Dollar Index, "
+        "the Hang Seng Index, an affordability ratio, or any other chart on the page. "
         "Set series_scope to territory and is_price_per_sqft to false. "
-        "period_end is the as-of date as YYYY-MM-DD. "
-        "If earlier readings of the same territory-wide index are listed, put them in recent_points."
+        "period_end is the Monday as-of date as YYYY-MM-DD. "
+        "If you include recent_points, every point must be this same All / 全港 weekly index."
     ),
 }
 
@@ -285,46 +302,85 @@ def _accept_rvd(extracted: dict[str, Any], today: date) -> tuple[dict[str, Any],
     return confirmed, official
 
 
-def _accept_midland(extracted: dict[str, Any], today: date, source_path: str) -> list[dict[str, Any]]:
-    _reject_wrong_series(extracted, "midland")
-    value = as_float(extracted.get("latest_value"))
-    check_value("midland", value)
-    period = parse_period(extracted.get("period_end"))
-    require(period is not None, "Midland extraction has no readable date")
-    require_recent(period, today, max_age_days=21)
-    rows = [
-        {
-            "period_date": period.isoformat(),
-            "period_label": period.isoformat(),
-            "value": value,
-            "source_path": source_path,
-            "raw_note": None,
-        }
-    ]
-    for point in extracted.get("recent_points") or []:
-        if not isinstance(point, dict):
-            continue
-        try:
-            point_value = as_float(point.get("value"))
-            check_value("midland", point_value)
-            point_date = parse_period(point.get("period_end"))
-            if point_date is None:
-                continue
-            require_recent(point_date, today, max_age_days=400)
-        except (QualityGateError, TypeError, ValueError):
-            continue
-        rows.append(
-            {
-                "period_date": point_date.isoformat(),
-                "period_label": point_date.isoformat(),
-                "value": point_value,
-                "source_path": source_path,
-                "raw_note": None,
-            }
+def fetch_midland_html() -> str:
+    response = requests.get(
+        MIDLAND_SEED,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html",
+            "Accept-Language": "en-HK,en;q=0.9",
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    response.encoding = response.encoding or "utf-8"
+    return response.text
+
+
+def load_official_midland(today: date) -> list[dict[str, Any]] | None:
+    """Territory-wide weekly index from the market-insight page, or None if unavailable."""
+    try:
+        points = parse_weekly_index(fetch_midland_html())
+        validate_weekly(points, today)
+    except (QualityGateError, requests.RequestException, ValueError, TypeError) as exc:
+        logger.info("Midland official weekly series unavailable: %s", exc)
+        return None
+    return points
+
+
+def _stored_midland_values() -> list[float]:
+    return [float(row["value"]) for row in series_rows("midland")]
+
+
+def _commit_midland(
+    rows: list[dict[str, Any]],
+    *,
+    verified: bool,
+    source_path: str,
+    url: str,
+    extracted: dict[str, Any] | None,
+) -> None:
+    require(bool(rows), "Midland extraction produced no rows")
+    stored = series_rows("midland")
+    if verified:
+        require(
+            len(rows) >= MIDLAND_MIN_POINTS,
+            f"Refusing to replace the Midland series with only {len(rows)} points",
         )
-    rows.sort(key=lambda row: row["period_date"])
-    deduped = {row["period_date"]: row for row in rows}
-    return [deduped[key] for key in sorted(deduped)]
+        removed = disagreement_count(stored, rows)
+        replace_observations("midland", rows)
+    else:
+        upsert_observations("midland", rows)
+        removed = 0
+    latest = rows[-1]
+    detail = (
+        f"Latest {latest['value']} on {latest['period_date']} "
+        f"via {source_path} ({len(rows)} territory-wide weekly points)"
+    )
+    if removed:
+        detail += f"; replaced {removed} stored points that were not this series or disagreed with it"
+    log_path("midland", source_path, "ok", detail)
+    write_evidence(
+        "midland",
+        {
+            "path": source_path,
+            "url": url,
+            "series": "territory-wide Midland Property Price Index",
+            "extracted": None
+            if extracted is None
+            else {
+                "index_name": extracted.get("index_name"),
+                "latest_value": extracted.get("latest_value"),
+                "period_end": extracted.get("period_end"),
+                "series_scope": extracted.get("series_scope"),
+            },
+            "stored_count": len(rows),
+            "stored_latest": latest,
+            "recent": rows[-8:],
+            "replaced_count": removed,
+        },
+    )
+    logger.info(detail)
 
 
 def _store_rvd(confirmed: dict[str, Any], official: list[dict[str, Any]], evidence_name: str, extracted: dict) -> None:
@@ -366,7 +422,11 @@ def _candidate_urls(series_id: str) -> list[str]:
         )
         seeds = [MIDLAND_SEED]
     urls: list[str] = []
-    for url in (discovered or seeds[:1]):
+    # Midland always starts from the market-insight page. A Tavily hit such as
+    # the homepage must not replace that page, because other charts there are
+    # a different series.
+    ordered = (seeds[:1] + discovered) if series_id == "midland" else (discovered or seeds[:1])
+    for url in ordered:
         if url not in urls:
             urls.append(url)
     if series_id == "rvd" and RVD_SEED_CSV not in urls:
@@ -376,7 +436,7 @@ def _candidate_urls(series_id: str) -> list[str]:
     return urls
 
 
-def _playwright_text_and_json(url: str) -> tuple[str, list[Any], list[str]]:
+def _playwright_text_and_json(url: str) -> tuple[str, list[Any], list[str], str]:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
@@ -406,13 +466,14 @@ def _playwright_text_and_json(url: str) -> tuple[str, list[Any], list[str]]:
             page.wait_for_timeout(2500)
             text = page.locator("body").inner_text(timeout=15000)
             hrefs = page.eval_on_selector_all("a", "els => els.map((el) => el.href).filter(Boolean)")
+            html = page.content()
         finally:
             browser.close()
-    return text, blobs, hrefs
+    return text, blobs, hrefs, html
 
 
 def playwright_rvd(today: date) -> tuple[dict[str, Any], list[dict[str, Any]], dict]:
-    text, _blobs, hrefs = _playwright_text_and_json(RVD_SEED_PAGE)
+    text, _blobs, hrefs, _html = _playwright_text_and_json(RVD_SEED_PAGE)
     require(
         "price indices" in text.lower() or "private domestic" in text.lower(),
         "RVD statistics page did not render",
@@ -446,10 +507,18 @@ def _walk_numbers(node: Any, found: list[tuple[str, float]]) -> None:
             _walk_numbers(item, found)
 
 
-def playwright_midland(today: date) -> list[dict[str, Any]]:
-    text, blobs, _hrefs = _playwright_text_and_json(MIDLAND_SEED)
+def playwright_midland(today: date) -> tuple[list[dict[str, Any]], bool]:
+    text, blobs, _hrefs, html = _playwright_text_and_json(MIDLAND_SEED)
+    try:
+        points = parse_weekly_index(html)
+        validate_weekly(points, today)
+        return observations_from_points(points, "playwright_fallback"), True
+    except QualityGateError as exc:
+        logger.info("Midland Playwright page had no usable weekly series: %s", exc)
     flat = re.sub(r"\s+", " ", text)
     patterns = [
+        r"All Index\s+(\d{2,3}\.\d{1,2})",
+        r"全港.{0,40}?(\d{2,3}\.\d{1,2})",
         r"Midland Property Price Index.{0,80}?(\d{2,3}\.\d{1,2})",
         r"美聯樓價指數.{0,40}?(\d{2,3}\.\d{1,2})",
         r"(\d{2,3}\.\d{1,2}).{0,40}?Midland Property Price Index",
@@ -478,15 +547,20 @@ def playwright_midland(today: date) -> list[dict[str, Any]]:
     period = parse_period(update.group(1))
     require(period is not None, "Midland update date could not be parsed")
     require_recent(period, today, max_age_days=21)
-    return [
+    rows, verified = select_midland_rows(
         {
-            "period_date": period.isoformat(),
-            "period_label": period.isoformat(),
-            "value": value,
-            "source_path": "playwright_fallback",
-            "raw_note": None,
-        }
-    ]
+            "index_name": "Midland Property Price Index",
+            "series_scope": "territory",
+            "latest_value": value,
+            "period_end": period.isoformat(),
+            "is_price_per_sqft": False,
+        },
+        None,
+        _stored_midland_values(),
+        today,
+        "playwright_fallback",
+    )
+    return rows, verified
 
 
 def extract_rvd(today: date | None = None) -> dict[str, Any]:
@@ -519,38 +593,48 @@ def extract_rvd(today: date | None = None) -> dict[str, Any]:
 def extract_midland(today: date | None = None) -> list[dict[str, Any]]:
     init_db()
     today = today or date.today()
+    official_points = load_official_midland(today)
+    stored_values = _stored_midland_values()
     errors: list[str] = []
     for url in _candidate_urls("midland"):
         try:
             extracted = firecrawl_extract(url, "midland")
-            rows = _accept_midland(extracted, today, "tavily_firecrawl")
-            upsert_observations("midland", rows)
-            latest = rows[-1]
-            detail = (
-                f"Latest {latest['value']} on {latest['period_date']} "
-                f"via tavily_firecrawl ({len(rows)} points stored)"
+            rows, verified = select_midland_rows(
+                extracted,
+                official_points,
+                stored_values,
+                today,
+                "tavily_firecrawl",
             )
-            log_path("midland", "tavily_firecrawl", "ok", detail)
-            write_evidence(
-                "midland",
-                {
-                    "path": "tavily_firecrawl",
-                    "url": extracted.get("_url"),
-                    "extracted": {
-                        "index_name": extracted.get("index_name"),
-                        "latest_value": extracted.get("latest_value"),
-                        "period_end": extracted.get("period_end"),
-                        "series_scope": extracted.get("series_scope"),
-                    },
-                    "stored": rows,
-                },
+            _commit_midland(
+                rows,
+                verified=verified,
+                source_path="tavily_firecrawl",
+                url=str(extracted.get("_url") or url),
+                extracted=extracted,
             )
-            logger.info(detail)
             return rows
         except (QualityGateError, requests.RequestException, ValueError) as exc:
             errors.append(f"{url}: {exc}")
             log_path("midland", "firecrawl", "fail", f"{url} failed the quality gate: {exc}")
             logger.info("Midland Firecrawl attempt failed for %s: %s", url, exc)
+    if official_points is not None:
+        logger.info("Midland: Firecrawl did not match the territory-wide index; storing the published weekly series")
+        log_path(
+            "midland",
+            "official_page",
+            "fallback",
+            "Firecrawl did not match the territory-wide Midland Property Price Index; storing that published series",
+        )
+        rows = observations_from_points(official_points, "official_page")
+        _commit_midland(
+            rows,
+            verified=True,
+            source_path="official_page",
+            url=MIDLAND_SEED,
+            extracted=None,
+        )
+        return rows
     logger.info("Midland: Firecrawl failed, Playwright fallback")
     log_path(
         "midland",
@@ -559,12 +643,14 @@ def extract_midland(today: date | None = None) -> list[dict[str, Any]]:
         "Firecrawl failed; opening the official market insight page",
     )
     try:
-        rows = playwright_midland(today)
-        upsert_observations("midland", rows)
-        detail = f"Latest {rows[-1]['value']} on {rows[-1]['period_date']} via playwright_fallback"
-        log_path("midland", "playwright_fallback", "ok", detail)
-        write_evidence("midland", {"path": "playwright_fallback", "url": MIDLAND_SEED, "stored": rows})
-        logger.info(detail)
+        rows, verified = playwright_midland(today)
+        _commit_midland(
+            rows,
+            verified=verified,
+            source_path="playwright_fallback",
+            url=MIDLAND_SEED,
+            extracted=None,
+        )
         return rows
     except (QualityGateError, Exception) as exc:
         detail = "; ".join(errors[-3:]) + f" | playwright: {exc}"

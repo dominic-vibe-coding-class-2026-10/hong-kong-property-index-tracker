@@ -64,6 +64,21 @@ def write_evidence(name: str, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _observation_params(series_id: str, rows: list[dict[str, Any]], now: str) -> list[tuple]:
+    return [
+        (
+            series_id,
+            row["period_date"],
+            row.get("period_label"),
+            float(row["value"]),
+            row["source_path"],
+            row.get("raw_note"),
+            now,
+        )
+        for row in rows
+    ]
+
+
 def upsert_observations(series_id: str, rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
@@ -81,18 +96,28 @@ def upsert_observations(series_id: str, rows: list[dict[str, Any]]) -> int:
                 raw_note = excluded.raw_note,
                 updated_at = excluded.updated_at
             """,
-            [
-                (
-                    series_id,
-                    row["period_date"],
-                    row.get("period_label"),
-                    float(row["value"]),
-                    row["source_path"],
-                    row.get("raw_note"),
-                    now,
-                )
-                for row in rows
-            ],
+            _observation_params(series_id, rows, now),
+        )
+    return len(rows)
+
+
+def replace_observations(series_id: str, rows: list[dict[str, Any]]) -> int:
+    """Replace every stored point for one series. Other series are left as they are.
+
+    An empty batch does not delete anything.
+    """
+    if not rows:
+        return 0
+    now = utc_now()
+    with connect() as conn:
+        conn.execute("DELETE FROM observations WHERE series_id = ?", (series_id,))
+        conn.executemany(
+            """
+            INSERT INTO observations (
+                series_id, period_date, period_label, value, source_path, raw_note, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            _observation_params(series_id, rows, now),
         )
     return len(rows)
 
